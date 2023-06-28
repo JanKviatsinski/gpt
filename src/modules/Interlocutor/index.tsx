@@ -86,6 +86,7 @@ export const Interlocutor = ({ openai }: Props) => {
     }
   }, [gptAnswer])
 
+
   const goConversation = async (text: string) => {
     try {
       setIsGptThinking(true)
