@@ -1,36 +1,38 @@
-import React, { useEffect, useState } from "react";
-import { Dictaphone } from "./Dictaphone";
-import { TextToSpeech } from "./TextToSpeech";
+import React, { useEffect, useState } from "react"
+import { Dictaphone } from "./Dictaphone"
+import { TextToSpeech } from "./TextToSpeech"
 import SpeechRecognition, {
   useSpeechRecognition,
-} from "react-speech-recognition";
-import { OpenAIApi } from "openai";
-import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
-import { PageNames } from "globalTypes/routing";
-import { CorrespondenceInterface } from "./types";
-import { Messeger } from "./Messeger";
-import { createArrayFromText } from "utils/createArrayFromText";
+} from "react-speech-recognition"
+import { OpenAIApi } from "openai"
+import { useTranslation } from "react-i18next"
+import { Link } from "react-router-dom"
+import { PageNames } from "globalTypes/routing"
+import { CorrespondenceInterface } from "./types"
+import { Messeger } from "./Messeger"
+import { createArrayFromText } from "utils/createArrayFromText"
 
 interface Props {
-  openai: OpenAIApi;
+  openai: OpenAIApi
 }
 
 export const Interlocutor = ({ openai }: Props) => {
-  const { t } = useTranslation();
-  const synth = window.speechSynthesis;
+  const { t } = useTranslation()
+  const synth = window.speechSynthesis
 
   const {
     transcript,
     listening,
     resetTranscript,
     browserSupportsSpeechRecognition,
-  } = useSpeechRecognition();
+  } = useSpeechRecognition()
 
-  const [gptAnswer, setGptAnswer] = useState("");
-  const [utterances, setUtterances] = useState<SpeechSynthesisUtterance[]>([]);
-  const [isGptSpiking, setIsGptSpiking] = useState(false);
-  const [isGptThinking, setIsGptThinking] = useState(false);
+  const [gptAnswer, setGptAnswer] = useState("")
+  const [utterances, setUtterances] = useState<SpeechSynthesisUtterance[]>([])
+  const [isGptSpiking, setIsGptSpiking] = useState(false)
+  const [isGptThinking, setIsGptThinking] = useState(false)
+
+
 
   const testC = [
     {
@@ -48,88 +50,94 @@ export const Interlocutor = ({ openai }: Props) => {
       message: "test13",
       timestump: 111111,
     },
-  ];
+  ]
 
   const [correspondence, setCorrespondence] = useState<
     CorrespondenceInterface[]
-  >([]);
+  >([])
+
 
   useEffect(() => {
+    const voice = synth.getVoices().find(voice => voice.voiceURI === 'Google UK English Male') || synth.getVoices()[0]
+
+    console.log(synth.getVoices())
     if (gptAnswer) {
-      const array = createArrayFromText(gptAnswer);
+      const array = createArrayFromText(gptAnswer)
+
       array.forEach((text) => {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.8;
-        utterance.voice = synth.getVoices()[146] || null;
-        synth.speak(utterance);
+        const utterance = new SpeechSynthesisUtterance(text)
+        utterance.rate = 0.9
+        utterance.voice = voice
+        synth.speak(utterance)
         utterance.addEventListener("start", () => {
-          console.log("start");
-          setIsGptSpiking(true);
-        });
+          console.log("start")
+          setIsGptSpiking(true)
+        })
         utterance.addEventListener("end", () => {
-          console.log("end");
-          setIsGptSpiking(false);
-        });
-        setUtterances((utrs) => [...utrs, utterance]);
-      });
+          console.log("end")
+          setIsGptSpiking(false)
+        })
+        setUtterances((utrs) => [...utrs, utterance])
+      })
     }
 
     return () => {
-      synth.cancel();
-    };
-  }, [gptAnswer]);
+      synth.cancel()
+    }
+  }, [gptAnswer])
 
   const goConversation = async (text: string) => {
     try {
-      setIsGptThinking(true);
+      setIsGptThinking(true)
       const completion = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
+        max_tokens: 256,
         messages: [
           { role: "system", content: "You are my interlocutor." },
           { role: "user", content: text },
         ],
-      });
-      const answer = completion.data.choices[0].message?.content;
-      setIsGptThinking(false);
+      })
+      const answer = completion.data.choices[0].message?.content
+      setIsGptThinking(false)
 
       if (answer) {
-        setIsGptSpiking(true);
-        setGptAnswer(answer);
+        setIsGptSpiking(true)
+        setGptAnswer(answer)
         setCorrespondence((massages) => [
           ...massages,
           { role: "gpt", message: answer, timestump: Date.now() },
-        ]);
+        ])
       } else {
-        throw new Error();
+        throw new Error()
       }
     } catch {
-      setIsGptThinking(false);
+      setIsGptThinking(false)
 
-      console.log("error");
+      console.log("error")
     }
-  };
+  }
 
   useEffect(() => {
     // console.log(!listening, transcript, !firstRender);
 
     if (!listening && transcript) {
-      console.log(transcript);
+      console.log(transcript)
       setCorrespondence((massages) => [
         ...massages,
         { role: "user", message: transcript, timestump: Date.now() },
-      ]);
-      goConversation(transcript);
+      ])
+      goConversation(transcript)
     }
-  }, [listening]);
+  }, [listening])
 
   const stopSpeakingHandler = () => {
     // utterances.forEach(uttr => )
-    synth.cancel();
-    setIsGptSpiking(false);
-  };
+    synth.cancel()
+    setIsGptSpiking(false)
+  }
 
   return (
-    <div className="pb-8">
+    <div className="pb-8 flex flex-col">
       <div className="pb-5 text-blue-500 underline">
         <Link to={"/" + PageNames.corrector}>{`${t("to")} ${t(
           "corrector"
@@ -155,5 +163,5 @@ export const Interlocutor = ({ openai }: Props) => {
         stopSpeaking={stopSpeakingHandler}
       />
     </div>
-  );
-};
+  )
+}

@@ -1,20 +1,20 @@
-import { Button } from "@mui/base";
-import CircularProgress from "@mui/material/CircularProgress";
-import React, { useEffect, useRef } from "react";
-import { CorrespondenceInterface } from "../types";
-import PlayCircleIcon from "@mui/icons-material/PlayCircle";
-import { ListeningOptions } from "react-speech-recognition";
-import { IconButton } from "@mui/material";
-import VoiceOverOffIcon from "@mui/icons-material/VoiceOverOff";
+import { Button } from "@mui/base"
+import CircularProgress from "@mui/material/CircularProgress"
+import React, { useEffect, useRef } from "react"
+import { CorrespondenceInterface } from "../types"
+import PlayCircleIcon from "@mui/icons-material/PlayCircle"
+import { ListeningOptions } from "react-speech-recognition"
+import { IconButton } from "@mui/material"
+import VoiceOverOffIcon from "@mui/icons-material/VoiceOverOff"
 
 interface Props {
-  messeges: CorrespondenceInterface[];
-  isGptThinking: boolean;
-  transcript: string;
-  listening: boolean;
-  startListening: (options?: ListeningOptions | undefined) => Promise<void>;
-  stopSpeaking: () => void;
-  isGptSpiking: boolean;
+  messeges: CorrespondenceInterface[]
+  isGptThinking: boolean
+  transcript: string
+  listening: boolean
+  startListening: (options?: ListeningOptions | undefined) => Promise<void>
+  stopSpeaking: () => void
+  isGptSpiking: boolean
 }
 
 export const Messeger = ({
@@ -26,28 +26,27 @@ export const Messeger = ({
   isGptSpiking,
   stopSpeaking,
 }: Props) => {
-  const ulRef = useRef<HTMLUListElement | null>(null);
+  const ulRef = useRef<HTMLUListElement | null>(null)
 
   useEffect(() => {
     if (ulRef.current) {
-      const element = ulRef.current;
-      element.scrollTop = element.scrollHeight;
+      const element = ulRef.current
+      element.scrollTop = element.scrollHeight
     }
-  }, [messeges]);
+  }, [messeges])
   const liClassName =
-    "flex flex-col mb-2 rounded p-3 w-[48%] max-w-[450px] items-end";
-  const userLiClassName = "text-right bg-blue-800 text-white self-end";
-  const gptLiClassName = "bg-blue-200 self-start";
+    "flex flex-col mb-2 rounded p-3 w-[48%] max-w-[450px] items-end"
+  const userLiClassName = "text-right bg-blue-800 text-white self-end"
+  const gptLiClassName = "bg-blue-200 self-start"
   return (
     <ul
       ref={ulRef}
-      className=" flex flex-col border-blue-500 p-2 border rounded max-h-[90vh] overflow-y-auto"
+      className=" flex flex-col border-blue-500 py-2 pl-2 pr-4 border rounded max-h-[80vh] overflow-y-auto w-full max-w-[900px] self-center"
     >
       {messeges.map((msg, i) => (
         <li
-          className={`${liClassName} ${
-            msg.role === "user" ? userLiClassName : gptLiClassName
-          }`}
+          className={`${liClassName} ${msg.role === "user" ? userLiClassName : gptLiClassName
+            }`}
         >
           {msg.message}
           <div className="min-h-[40px]">
@@ -83,5 +82,5 @@ export const Messeger = ({
         </li>
       )}
     </ul>
-  );
-};
+  )
+}
