@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react"
-import { Dictaphone } from "./Dictaphone"
-import { TextToSpeech } from "./TextToSpeech"
 import SpeechRecognition, {
+  SpeechRecognitionOptions,
   useSpeechRecognition,
 } from "react-speech-recognition"
 import { OpenAIApi } from "openai"
@@ -11,6 +10,10 @@ import { PageNames } from "globalTypes/routing"
 import { CorrespondenceInterface } from "./types"
 import { Messeger } from "./Messeger"
 import { createArrayFromText } from "utils/createArrayFromText"
+
+// interface RealSpeechRecognitionOptions extends SpeechRecognitionOptions {
+//   browserSupportsContinuousListening: boolean
+// }
 
 interface Props {
   openai: OpenAIApi
@@ -25,11 +28,12 @@ export const Interlocutor = ({ openai }: Props) => {
     listening,
     resetTranscript,
     browserSupportsSpeechRecognition,
+    // @ts-ignore
+    browserSupportsContinuousListening
   } = useSpeechRecognition()
 
   const [gptAnswer, setGptAnswer] = useState("")
-  const [utterances, setUtterances] = useState<SpeechSynthesisUtterance[]>([])
-  const [isGptSpiking, setIsGptSpiking] = useState(false)
+  const [isGptTalking, setIsGptSpiking] = useState(false)
   const [isGptThinking, setIsGptThinking] = useState(false)
 
 
@@ -59,8 +63,6 @@ export const Interlocutor = ({ openai }: Props) => {
 
   useEffect(() => {
     const voice = synth.getVoices().find(voice => voice.voiceURI === 'Google UK English Male') || synth.getVoices()[0]
-
-    console.log(synth.getVoices())
     if (gptAnswer) {
       const array = createArrayFromText(gptAnswer)
 
@@ -70,14 +72,11 @@ export const Interlocutor = ({ openai }: Props) => {
         utterance.voice = voice
         synth.speak(utterance)
         utterance.addEventListener("start", () => {
-          console.log("start")
           setIsGptSpiking(true)
         })
         utterance.addEventListener("end", () => {
-          console.log("end")
           setIsGptSpiking(false)
         })
-        setUtterances((utrs) => [...utrs, utterance])
       })
     }
 
@@ -86,13 +85,23 @@ export const Interlocutor = ({ openai }: Props) => {
     }
   }, [gptAnswer])
 
+  useEffect(() => {
+    if (!listening && transcript) {
+      setCorrespondence((massages) => [
+        ...massages,
+        { role: "user", message: transcript, timestump: Date.now() },
+      ])
+      console.log(transcript)
+
+      goConversation(transcript)
+    }
+  }, [listening])
 
   const goConversation = async (text: string) => {
     try {
       setIsGptThinking(true)
       const completion = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
-        max_tokens: 256,
         messages: [
           { role: "system", content: "You are my interlocutor." },
           { role: "user", content: text },
@@ -118,23 +127,18 @@ export const Interlocutor = ({ openai }: Props) => {
     }
   }
 
-  useEffect(() => {
-    // console.log(!listening, transcript, !firstRender);
-
-    if (!listening && transcript) {
-      console.log(transcript)
-      setCorrespondence((massages) => [
-        ...massages,
-        { role: "user", message: transcript, timestump: Date.now() },
-      ])
-      goConversation(transcript)
-    }
-  }, [listening])
-
   const stopSpeakingHandler = () => {
-    // utterances.forEach(uttr => )
     synth.cancel()
     setIsGptSpiking(false)
+  }
+
+  const manuallyStartMicrophone = () => {
+    SpeechRecognition.startListening({ continuous: true })
+    resetTranscript()
+  }
+
+  if (!browserSupportsSpeechRecognition) {
+    return <span>Browser doesn't support speech recognition.</span>
   }
 
   return (
@@ -144,24 +148,19 @@ export const Interlocutor = ({ openai }: Props) => {
           "corrector"
         )} `}</Link>
       </div>
-      <Dictaphone
-        transcript={transcript}
-        listening={listening}
-        resetTranscript={resetTranscript}
-        browserSupportsSpeechRecognition={browserSupportsSpeechRecognition}
-        startListening={SpeechRecognition.startListening}
-        stopListening={SpeechRecognition.stopListening}
-      />
-      {/* <TextToSpeech text={gptAnswer} /> */}
+      <p>Microphone: {listening ? "on" : "off"}</p>
 
       <Messeger
         transcript={transcript}
         messeges={correspondence}
         listening={listening}
         isGptThinking={isGptThinking}
-        isGptSpiking={isGptSpiking}
+        isGptTalking={isGptTalking}
         startListening={SpeechRecognition.startListening}
         stopSpeaking={stopSpeakingHandler}
+        manuallyStartMicrophone={manuallyStartMicrophone}
+        browserSupportsContinuousListening={browserSupportsContinuousListening}
+        stopListening={SpeechRecognition.stopListening}
       />
     </div>
   )

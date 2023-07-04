@@ -1,12 +1,14 @@
 import { Button } from "@mui/base"
 import CircularProgress from "@mui/material/CircularProgress"
-import React, { useEffect, useRef } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { CorrespondenceInterface } from "../types"
-import PlayCircleIcon from "@mui/icons-material/PlayCircle"
 import { ListeningOptions } from "react-speech-recognition"
 import { IconButton } from "@mui/material"
-import VoiceOverOffIcon from "@mui/icons-material/VoiceOverOff"
 
+import VoiceOverOffIcon from "@mui/icons-material/VoiceOverOff"
+import MicIcon from '@mui/icons-material/Mic'
+import HearingIcon from '@mui/icons-material/Hearing'
+import MicOffIcon from '@mui/icons-material/MicOff'
 interface Props {
   messeges: CorrespondenceInterface[]
   isGptThinking: boolean
@@ -14,7 +16,10 @@ interface Props {
   listening: boolean
   startListening: (options?: ListeningOptions | undefined) => Promise<void>
   stopSpeaking: () => void
-  isGptSpiking: boolean
+  isGptTalking: boolean
+  browserSupportsContinuousListening: boolean
+  stopListening: () => Promise<void>
+  manuallyStartMicrophone: () => void
 }
 
 export const Messeger = ({
@@ -23,17 +28,24 @@ export const Messeger = ({
   startListening,
   listening,
   transcript,
-  isGptSpiking,
+  isGptTalking,
   stopSpeaking,
+  browserSupportsContinuousListening,
+  stopListening,
+  manuallyStartMicrophone
 }: Props) => {
   const ulRef = useRef<HTMLUListElement | null>(null)
+  const [userInputText, setUserInputText] = useState(transcript)
+
 
   useEffect(() => {
     if (ulRef.current) {
       const element = ulRef.current
       element.scrollTop = element.scrollHeight
     }
+    setUserInputText('')
   }, [messeges])
+
   const liClassName =
     "flex flex-col mb-2 rounded p-3 w-[48%] max-w-[450px] items-end"
   const userLiClassName = "text-right bg-blue-800 text-white self-end"
@@ -52,11 +64,9 @@ export const Messeger = ({
           <div className="min-h-[40px]">
             {msg.role === "gpt" &&
               i === messeges.length - 1 &&
-              isGptSpiking && (
+              isGptTalking && (
                 <IconButton onClick={stopSpeaking}>
                   <VoiceOverOffIcon
-                  // fontSize="large"
-                  //   color={`${listening ? "disabled" : "info"}`}
                   />
                 </IconButton>
               )}
@@ -69,16 +79,42 @@ export const Messeger = ({
         </li>
       ) : (
         <li className={`${liClassName} ${userLiClassName}`}>
-          {transcript}
-          <IconButton
-            onClick={() => startListening()}
-            disabled={listening || isGptSpiking}
-          >
-            <PlayCircleIcon
-              fontSize="large"
-              color={`${listening || isGptSpiking ? "disabled" : "info"}`}
-            />
-          </IconButton>
+          {userInputText}
+          <div className='flex'>
+            {/* auto mic */}
+            <IconButton
+              onClick={() => startListening()}
+              disabled={listening || isGptTalking}
+            >
+              <HearingIcon
+                fontSize="large"
+                style={{ color: `${listening || isGptTalking ? "" : 'white'}` }}
+              />
+            </IconButton>
+            {browserSupportsContinuousListening && <>
+              {/* manuale mic */}
+              <IconButton
+
+                onClick={() => manuallyStartMicrophone()}
+                disabled={listening || isGptTalking}
+              >
+                <MicIcon
+                  fontSize="large"
+                  style={{ color: `${listening || isGptTalking ? "" : 'white'}` }}
+                />
+              </IconButton>
+              <IconButton
+                onClick={stopListening}
+                disabled={!listening || isGptTalking}
+              >
+                {/* mic off btn */}
+                <MicOffIcon
+                  fontSize="large"
+                  style={{ color: `${!listening || isGptTalking ? "" : 'white'}` }}
+                />
+              </IconButton>
+            </>}
+          </div>
         </li>
       )}
     </ul>
